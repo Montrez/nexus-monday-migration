@@ -1,0 +1,28 @@
+engagement_id,engagement_name,client,engagement_lead,engagement_start,engagement_end,budget,engagement_status,deliverable_id,deliverable_name,assignee,due_date,priority,deliverable_status,hours_estimated
+ENG-001,Digital Transformation Strategy,Acme Corporation,Sarah Chen,01/15/2025,04/30/2025,150000,In Progress,DEL-001,Current State Assessment,Michael Torres,02/01/2025,High,Done,40
+ENG-001,Digital Transformation Strategy,Acme Corporation,Sarah Chen,01/15/2025,04/30/2025,150000,In Progress,DEL-002,Stakeholder Interviews,Sarah Chen,02/15/2025,High,Done,24
+ENG-001,Digital Transformation Strategy,Acme Corporation,Sarah Chen,01/15/2025,04/30/2025,150000,In Progress,DEL-003,Technology Roadmap,Michael Torres,03/15/2025,High,Working on it,60
+ENG-001,Digital Transformation Strategy,Acme Corporation,Sarah Chen,01/15/2025,04/30/2025,150000,In Progress,DEL-004,Implementation Plan,Sarah Chen,04/15/2025,Medium,To Do,32
+ENG-001,Digital Transformation Strategy,Acme Corporation,Sarah Chen,01/15/2025,04/30/2025,150000,In Progress,DEL-005,Executive Presentation,Sarah Chen,04/30/2025,High,Not Started,16
+ENG-002,Operational Excellence Program,Global Industries,James Wilson,02/01/2025,06/30/2025,200000,Active,DEL-006,Process Mapping Workshop,Emily Rodriguez,02/20/2025,High,Done,16
+ENG-002,Operational Excellence Program,Global Industries,James Wilson,02/01/2025,06/30/2025,200000,Active,DEL-007,Efficiency Analysis Report,James Wilson,03/15/2025,High,In Review,48
+ENG-002,Operational Excellence Program,Global Industries,James Wilson,02/01/2025,06/30/2025,200000,Active,DEL-008,KPI Dashboard Design,Emily Rodriguez,04/01/2025,Medium,In Progress,24
+ENG-002,Operational Excellence Program,Global Industries,James Wilson,02/01/2025,06/30/2025,200000,Active,DEL-009,Training Materials,Alex Kim,05/15/2025,Low,To Do,32
+ENG-002,Operational Excellence Program,Global Industries,James Wilson,02/01/2025,06/30/2025,200000,Active,DEL-010,Change Management Plan,James Wilson,06/01/2025,High,To Do,40
+ENG-003,Market Entry Analysis,TechStart Inc,Rachel Martinez,03/01/2025,05/15/2025,75000,In Progress,DEL-011,Competitive Landscape Review,Rachel Martinez,03/20/2025,High,Done,32
+ENG-003,Market Entry Analysis,TechStart Inc,Rachel Martinez,03/01/2025,05/15/2025,75000,In Progress,DEL-012,Customer Segmentation Study,David Park,04/05/2025,High,Working on it,28
+ENG-003,Market Entry Analysis,TechStart Inc,Rachel Martinez,03/01/2025,05/15/2025,75000,In Progress,DEL-013,Go-to-Market Strategy,Rachel Martinez,05/01/2025,High,Not Started,36
+ENG-003,Market Entry Analysis,TechStart Inc,Rachel Martinez,03/01/2025,05/15/2025,75000,In Progress,DEL-014,Financial Projections,David Park,05/10/2025,Medium,To Do,20
+ENG-004,Supply Chain Optimization,Metro Manufacturing,Chris Anderson,11/01/2024,02/28/2025,180000,Complete,DEL-015,Inventory Analysis,Chris Anderson,11/20/2024,High,Done,36
+ENG-004,Supply Chain Optimization,Metro Manufacturing,Chris Anderson,11/01/2024,02/28/2025,180000,Complete,DEL-016,Vendor Assessment,Lisa Wang,12/15/2024,High,Done,28
+ENG-004,Supply Chain Optimization,Metro Manufacturing,Chris Anderson,11/01/2024,02/28/2025,180000,Complete,DEL-017,Logistics Redesign,Chris Anderson,01/30/2025,High,Done,52
+ENG-004,Supply Chain Optimization,Metro Manufacturing,Chris Anderson,11/01/2024,02/28/2025,180000,Complete,DEL-018,Implementation Roadmap,Lisa Wang,02/15/2025,Medium,Done,24
+ENG-004,Supply Chain Optimization,Metro Manufacturing,Chris Anderson,11/01/2024,02/28/2025,180000,Complete,DEL-019,Final Report & Handoff,Chris Anderson,02/28/2025,High,Done,16
+ENG-005,Customer Experience Redesign,Retail Plus,Jennifer Lee,12/01/2024,03/31/2025,120000,On Hold,DEL-020,Journey Mapping Sessions,Jennifer Lee,12/20/2024,High,Done,20
+ENG-005,Customer Experience Redesign,Retail Plus,Jennifer Lee,12/01/2024,03/31/2025,120000,On Hold,DEL-021,Pain Point Analysis,Kevin Brown,01/15/2025,High,Done,32
+ENG-005,Customer Experience Redesign,Retail Plus,Jennifer Lee,12/01/2024,03/31/2025,120000,On Hold,DEL-022,Service Blueprint,Jennifer Lee,02/28/2025,Medium,In Progress,40
+ENG-005,Customer Experience Redesign,Retail Plus,Jennifer Lee,12/01/2024,03/31/2025,120000,On Hold,DEL-023,Prototype Development,Kevin Brown,03/15/2025,High,To Do,48
+ENG-006,Workforce Planning Initiative,HealthFirst Medical,Amanda Foster,04/01/2025,07/31/2025,95000,Not Started,DEL-024,Skills Gap Assessment,Amanda Foster,04/30/2025,High,To Do,28
+ENG-006,Workforce Planning Initiative,HealthFirst Medical,Amanda Foster,04/01/2025,07/31/2025,95000,Not Started,DEL-025,Hiring Strategy Document,Robert Chen,05/31/2025,Medium,To Do,24
+ENG-006,Workforce Planning Initiative,HealthFirst Medical,Amanda Foster,04/01/2025,07/31/2025,95000,Not Started,DEL-026,Training Program Design,Amanda Foster,06/30/2025,Medium,To Do,36
+ENG-006,Workforce Planning Initiative,HealthFirst Medical,Amanda Foster,04/01/2025,07/31/2025,95000,Not Started,DEL-027,Succession Planning Framework,Robert Chen,07/31/2025,Low,To Do,32
