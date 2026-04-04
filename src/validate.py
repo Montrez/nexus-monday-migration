@@ -31,6 +31,7 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from typing import Optional
 
 load_dotenv()
 
@@ -59,7 +60,7 @@ PRIORITY_MAP = {"high": "High", "medium": "Medium", "low": "Low"}
 
 
 # ── GraphQL Helper ────────────────────────────────────────────────────────────
-def graphql(query: str, variables: dict | None = None) -> dict:
+def graphql(query: str, variables: Optional[dict] = None) -> dict:
     if not API_KEY:
         print("ERROR: MONDAY_API_KEY is not set.")
         sys.exit(1)
@@ -81,7 +82,7 @@ def graphql(query: str, variables: dict | None = None) -> dict:
 
 
 # ── Data Helpers (shared with migrate.py) ─────────────────────────────────────
-def to_iso_date(date_str: str) -> str | None:
+def to_iso_date(date_str: str) -> Optional[str]:
     if not date_str:
         return None
     try:
@@ -90,14 +91,14 @@ def to_iso_date(date_str: str) -> str | None:
         return None
 
 
-def load_csv(filepath: str) -> list[dict]:
+def load_csv(filepath: str) -> list:
     with open(filepath, newline="", encoding="utf-8") as f:
         return [{k.strip(): v.strip() for k, v in row.items()}
                 for row in csv.DictReader(f)]
 
 
-def extract_engagements(rows: list[dict]) -> dict[str, dict]:
-    seen: dict[str, dict] = {}
+def extract_engagements(rows: list) -> dict:
+    seen = {}
     for row in rows:
         eid = row["engagement_id"]
         if eid not in seen:
@@ -115,7 +116,7 @@ def extract_engagements(rows: list[dict]) -> dict[str, dict]:
     return seen
 
 
-def extract_deliverables(rows: list[dict]) -> list[dict]:
+def extract_deliverables(rows: list) -> list:
     result = []
     for row in rows:
         result.append({
@@ -134,12 +135,12 @@ def extract_deliverables(rows: list[dict]) -> list[dict]:
 
 
 # ── monday.com Query ──────────────────────────────────────────────────────────
-def fetch_board_items(board_id: str) -> list[dict]:
+def fetch_board_items(board_id: str) -> list:
     """
     Retrieve all items from a board with their column values.
     Uses cursor-based pagination to handle boards with many items.
     """
-    items: list[dict] = []
+    items = []
     cursor = None
 
     while True:
@@ -216,8 +217,14 @@ def validate(csv_path: str, results_path: str) -> None:
     print("\n[2/4]  Querying monday.com boards …")
     monday_engagements  = fetch_board_items(eng_board_id)
     monday_deliverables = fetch_board_items(del_board_id)
+    # Filter out monday.com's auto-created default rows (no ID value)
+    monday_engagements  = [i for i in monday_engagements
+                           if col_text(i, eng_cols["engagement_id"])]
+    monday_deliverables = [i for i in monday_deliverables
+                           if col_text(i, del_cols["deliverable_id"])]
+
     print(f"  monday.com: {len(monday_engagements)} engagements, "
-          f"{len(monday_deliverables)} deliverables")
+          f"{len(monday_deliverables)} deliverables (default rows excluded)")
 
     # Index monday items by Engagement ID / Deliverable ID for lookup
     monday_eng_by_id  = {
@@ -229,7 +236,7 @@ def validate(csv_path: str, results_path: str) -> None:
         for item in monday_deliverables
     }
 
-    report: dict[str, list] = {}
+    report = {}
     issues: list[str] = []
 
     # ── Check 1: Record counts ────────────────────────────────────────────────
@@ -332,10 +339,12 @@ def validate(csv_path: str, results_path: str) -> None:
 
     # ── Check 4: No orphaned deliverables ─────────────────────────────────────
     print("\n  ── Relationship Integrity ──")
-    orphans: list[str] = []
+    orphans = []
     for item in monday_deliverables:
         did = col_text(item, del_cols["deliverable_id"])
-        eng_link = col_text(item, del_cols["engagement"])
+        if not did:
+            continue  # skip the auto-created default row
+        eng_link = col_text(item, del_cols["engagement_ref"])
         if not eng_link:
             orphans.append(f"{did} ({item['name']})")
 
@@ -467,7 +476,7 @@ def validate(csv_path: str, results_path: str) -> None:
 
 
 # ── Print Helper ──────────────────────────────────────────────────────────────
-def _print_check(passed: bool, label: str, errors: list[str] | None = None) -> None:
+def _print_check(passed: bool, label: str, errors: Optional[list] = None) -> None:
     icon = "✅" if passed else "❌"
     print(f"  {icon}  {label}")
     if errors:

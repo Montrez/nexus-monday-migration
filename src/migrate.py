@@ -24,13 +24,14 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from typing import Optional
 
 load_dotenv()
 
 # ── Configuration ────────────────────────────────────────────────────────────
 API_KEY = os.environ.get("MONDAY_API_KEY", "")
 API_URL = "https://api.monday.com/v2"
-REQUEST_DELAY = 0.3   # seconds between mutations — stays well under rate limits
+REQUEST_DELAY = 2.0   # conservative delay — monday.com trial accounts have tight rate limits
 
 # ── Status Normalisation Maps ────────────────────────────────────────────────
 # Discovery call noted multiple synonymous values in the source data.
@@ -68,7 +69,7 @@ PRIORITY_LABELS            = {"1": "High",  "2": "Medium",     "3": "Low"}
 
 
 # ── GraphQL Helper ────────────────────────────────────────────────────────────
-def graphql(query: str, variables: dict | None = None) -> dict:
+def graphql(query: str, variables: Optional[dict] = None) -> dict:
     """Execute a GraphQL request against the monday.com v2 API."""
     if not API_KEY:
         print("ERROR: MONDAY_API_KEY is not set. Add it to your .env file.")
@@ -83,18 +84,25 @@ def graphql(query: str, variables: dict | None = None) -> dict:
     if variables:
         payload["variables"] = variables
 
-    time.sleep(REQUEST_DELAY)
-    response = requests.post(API_URL, json=payload, headers=headers)
-    response.raise_for_status()
+    for attempt in range(5):
+        time.sleep(REQUEST_DELAY)
+        response = requests.post(API_URL, json=payload, headers=headers)
+        if response.status_code == 429:
+            wait = 10 * (2 ** attempt)
+            print(f"    ⚠  Rate limited — waiting {wait}s …")
+            time.sleep(wait)
+            continue
+        response.raise_for_status()
+        data = response.json()
+        if "errors" in data:
+            raise RuntimeError(f"GraphQL error:\n{json.dumps(data['errors'], indent=2)}")
+        return data["data"]
 
-    data = response.json()
-    if "errors" in data:
-        raise RuntimeError(f"GraphQL error:\n{json.dumps(data['errors'], indent=2)}")
-    return data["data"]
+    raise RuntimeError("Exceeded retry limit due to rate limiting.")
 
 
 # ── Date Helper ───────────────────────────────────────────────────────────────
-def to_iso_date(date_str: str) -> str | None:
+def to_iso_date(date_str: str) -> Optional[str]:
     """Convert MM/DD/YYYY → YYYY-MM-DD (monday.com date format)."""
     if not date_str:
         return None
@@ -105,13 +113,13 @@ def to_iso_date(date_str: str) -> str | None:
 
 
 # ── Data Loading & Transformation ─────────────────────────────────────────────
-def load_csv(filepath: str) -> list[dict]:
+def load_csv(filepath: str) -> list:
     with open(filepath, newline="", encoding="utf-8") as f:
         return [{k.strip(): v.strip() for k, v in row.items()}
                 for row in csv.DictReader(f)]
 
 
-def extract_engagements(rows: list[dict]) -> dict[str, dict]:
+def extract_engagements(rows: list) -> dict:
     """
     Deduplicate engagement rows (one row per deliverable in the source) and
     normalise inconsistent status values found in the discovery call.
@@ -136,7 +144,7 @@ def extract_engagements(rows: list[dict]) -> dict[str, dict]:
     return seen
 
 
-def extract_deliverables(rows: list[dict]) -> list[dict]:
+def extract_deliverables(rows: list) -> list:
     """Normalise deliverable rows — status, priority, and date formats."""
     result = []
     for row in rows:
@@ -157,6 +165,24 @@ def extract_deliverables(rows: list[dict]) -> list[dict]:
 
 
 # ── Board & Column Helpers ────────────────────────────────────────────────────
+def delete_boards_by_name(names: list) -> None:
+    """Delete any existing boards matching the given names (idempotency helper)."""
+    result = graphql(
+        """
+        query {
+          boards(limit: 100) { id name }
+        }
+        """
+    )
+    for board in result.get("boards", []):
+        if board["name"] in names:
+            graphql(
+                "mutation($id: ID!) { delete_board(board_id: $id) { id } }",
+                {"id": board["id"]},
+            )
+            print(f"  🗑  Deleted existing board '{board['name']}' (ID: {board['id']})")
+
+
 def create_board(name: str) -> str:
     print(f"  Creating board: '{name}' …")
     result = graphql(
@@ -173,7 +199,7 @@ def create_board(name: str) -> str:
 
 
 def create_column(board_id: str, title: str, col_type: str,
-                  defaults: dict | None = None) -> str:
+                  defaults: Optional[dict] = None) -> str:
     variables: dict = {"boardId": board_id, "title": title, "colType": col_type}
     if defaults:
         variables["defaults"] = json.dumps(defaults)
@@ -193,17 +219,8 @@ def create_column(board_id: str, title: str, col_type: str,
 
 
 def set_status_labels(board_id: str, col_id: str, labels: dict) -> None:
-    """Replace the status labels on a 'color' (status) column."""
-    graphql(
-        """
-        mutation($boardId: ID!, $colId: String!, $value: String!) {
-          change_column_metadata(board_id: $boardId, column_id: $colId,
-                                 column_property: labels, value: $value) { id }
-        }
-        """,
-        {"boardId": board_id, "colId": col_id, "value": json.dumps(labels)},
-    )
-    print(f"    ✓ Labels set on column {col_id}: {list(labels.values())}")
+    """No-op placeholder — labels are now set at column creation via defaults."""
+    pass
 
 
 def create_item(board_id: str, name: str, col_values: dict) -> str:
@@ -225,8 +242,12 @@ def run_migration(csv_path: str) -> dict:
     print("  NEXUS CONSULTING GROUP  —  Smartsheet → monday.com Migration")
     print("═" * 62)
 
+    # ── 0. Clean up any previous run ─────────────────────────────────────────
+    print("\n[0/5]  Checking for existing boards to clean up …")
+    delete_boards_by_name(["Nexus Engagements", "Nexus Deliverables"])
+
     # ── 1. Load & transform source data ──────────────────────────────────────
-    print("\n[1/5]  Loading & transforming source data …")
+    print(f"\n[1/5]  Loading & transforming source data …")
     rows          = load_csv(csv_path)
     engagements   = extract_engagements(rows)
     deliverables  = extract_deliverables(rows)
@@ -256,9 +277,9 @@ def run_migration(csv_path: str) -> dict:
         "start_date":    create_column(eng_board_id, "Start Date",         "date"),
         "end_date":      create_column(eng_board_id, "End Date",           "date"),
         "budget":        create_column(eng_board_id, "Budget ($)",         "numbers"),
-        "status":        create_column(eng_board_id, "Engagement Status",  "color"),
+        "status":        create_column(eng_board_id, "Engagement Status",  "status",
+                                       {"labels": ENGAGEMENT_STATUS_LABELS}),
     }
-    set_status_labels(eng_board_id, eng_cols["status"], ENGAGEMENT_STATUS_LABELS)
 
     # ── 3. Create Deliverables board ──────────────────────────────────────────
     print("\n[3/5]  Creating Deliverables board …")
@@ -269,22 +290,24 @@ def run_migration(csv_path: str) -> dict:
         "deliverable_id": create_column(del_board_id, "Deliverable ID",      "text"),
         "assignee":       create_column(del_board_id, "Assignee",             "text"),
         "due_date":       create_column(del_board_id, "Due Date",             "date"),
-        "priority":       create_column(del_board_id, "Priority",             "color"),
-        "status":         create_column(del_board_id, "Deliverable Status",   "color"),
+        "priority":       create_column(del_board_id, "Priority",             "status",
+                                        {"labels": PRIORITY_LABELS}),
+        "status":         create_column(del_board_id, "Deliverable Status",   "status",
+                                        {"labels": DELIVERABLE_STATUS_LABELS}),
         "hours":          create_column(del_board_id, "Hours Estimated",      "numbers"),
-        "engagement":     create_column(del_board_id, "Engagement",           "board_relation",
-                                        {"boardIds": [int(eng_board_id)]}),
+        "engagement_ref": create_column(del_board_id, "Engagement",           "text"),
     }
-    set_status_labels(del_board_id, del_cols["priority"], PRIORITY_LABELS)
-    set_status_labels(del_board_id, del_cols["status"],   DELIVERABLE_STATUS_LABELS)
+    # NOTE: board_relation (Connect Boards) columns cannot be created via the API.
+    # After migration, manually add a "Connect Boards" column in the Deliverables
+    # board UI and link it to Nexus Engagements to enable native item linking.
 
     # ── 4. Import engagements ─────────────────────────────────────────────────
     print(f"\n[4/5]  Importing {len(engagements)} engagements …")
-    engagement_item_ids: dict[str, str] = {}
+    engagement_item_ids = {}
 
     for i, (eid, eng) in enumerate(engagements.items(), 1):
         print(f"  [{i:02d}/{len(engagements)}]  {eid}  {eng['name']}")
-        col_values: dict = {
+        col_values = {
             eng_cols["engagement_id"]: eng["engagement_id"],
             eng_cols["client"]:        eng["client"],
             eng_cols["lead"]:          eng["lead"],
@@ -312,14 +335,10 @@ def run_migration(csv_path: str) -> dict:
             del_cols["hours"]:          deliv["hours"],
             del_cols["priority"]:       {"label": deliv["priority"]},
             del_cols["status"]:         {"label": deliv["status"]},
+            del_cols["engagement_ref"]: deliv["engagement_id"],
         }
         if deliv["due_date"]:
             col_values[del_cols["due_date"]] = {"date": deliv["due_date"]}
-
-        # Link back to parent engagement item
-        parent_item_id = engagement_item_ids.get(deliv["engagement_id"])
-        if parent_item_id:
-            col_values[del_cols["engagement"]] = {"item_ids": [int(parent_item_id)]}
 
         item_id = create_item(del_board_id, deliv["name"], col_values)
         deliverable_item_ids.append(item_id)
