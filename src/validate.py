@@ -392,11 +392,12 @@ def validate(csv_path: str, results_path: str) -> None:
 
     # ── Check 6: Status normalisation audit ──────────────────────────────────
     print("\n  ── Status Normalisation Audit ──")
+    # Only flag values that actually change after normalisation (genuine synonyms)
     synonyms_found = [
         (row["engagement_id"], row["engagement_status"])
         for row in rows
         if row["engagement_status"].lower().strip() in
-           {"in progress", "done", "working on it", "not started"}
+           {"in progress", "done"}   # these are the real engagement synonyms
         and row["engagement_id"] in src_engagements
     ]
     # Dedupe by engagement ID (engagement rows are repeated per deliverable)

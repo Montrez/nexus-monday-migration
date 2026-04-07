@@ -218,11 +218,6 @@ def create_column(board_id: str, title: str, col_type: str,
     return col_id
 
 
-def set_status_labels(board_id: str, col_id: str, labels: dict) -> None:
-    """No-op placeholder — labels are now set at column creation via defaults."""
-    pass
-
-
 def create_item(board_id: str, name: str, col_values: dict) -> str:
     result = graphql(
         """
@@ -247,7 +242,7 @@ def run_migration(csv_path: str) -> dict:
     delete_boards_by_name(["Nexus Engagements", "Nexus Deliverables"])
 
     # ── 1. Load & transform source data ──────────────────────────────────────
-    print(f"\n[1/5]  Loading & transforming source data …")
+    print("\n[1/5]  Loading & transforming source data …")
     rows          = load_csv(csv_path)
     engagements   = extract_engagements(rows)
     deliverables  = extract_deliverables(rows)
